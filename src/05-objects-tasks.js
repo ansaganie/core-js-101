@@ -20,8 +20,14 @@
  *    console.log(r.height);      // => 20
  *    console.log(r.getArea());   // => 200
  */
-function Rectangle(/* width, height */) {
-  throw new Error('Not implemented');
+function Rectangle(width, height) {
+  return {
+    width,
+    height,
+    getArea() {
+      return this.height * this.width;
+    },
+  };
 }
 
 
@@ -35,8 +41,8 @@ function Rectangle(/* width, height */) {
  *    [1,2,3]   =>  '[1,2,3]'
  *    { width: 10, height : 20 } => '{"height":10,"width":20}'
  */
-function getJSON(/* obj */) {
-  throw new Error('Not implemented');
+function getJSON(obj) {
+  return JSON.stringify(obj);
 }
 
 
@@ -51,8 +57,8 @@ function getJSON(/* obj */) {
  *    const r = fromJSON(Circle.prototype, '{"radius":10}');
  *
  */
-function fromJSON(/* proto, json */) {
-  throw new Error('Not implemented');
+function fromJSON(proto, json) {
+  return Object.setPrototypeOf(JSON.parse(json), proto);
 }
 
 
@@ -105,38 +111,120 @@ function fromJSON(/* proto, json */) {
  *           )
  *      )
  *  ).stringify()
- *    => 'div#main.container.draggable + table#data ~ tr:nth-of-type(even)   td:nth-of-type(even)'
+ *    => 'div#main.container.draggable + table#data ~ tr:nth-of-type(even) td:nth-of-type(even)'
+ *        div#main.container.draggable + table#data ~ tr:nth-of-type(even) td:nth-of-type(even)
  *
  *  For more examples see unit tests.
  */
 
+const DUPLICATE_CLASS_ERROR = 'Element, id and pseudo-element should not occur more then one time inside the selector';
+const CLASS_ORDER_ERROR = 'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element';
+
 const cssSelectorBuilder = {
-  element(/* value */) {
-    throw new Error('Not implemented');
+  selector: '',
+  hasElement: false,
+  hasId: false,
+  hasPseudoElement: false,
+  order: 0,
+
+  element(value) {
+    if (this.hasElement) {
+      throw new Error(DUPLICATE_CLASS_ERROR);
+    }
+
+    if (this.order > 1) {
+      throw new Error(CLASS_ORDER_ERROR);
+    }
+
+    return {
+      ...this,
+      selector: `${this.selector}${value}`,
+      hasElement: true,
+      order: 1,
+    };
   },
 
-  id(/* value */) {
-    throw new Error('Not implemented');
+  id(value) {
+    if (this.hasId) {
+      throw new Error(DUPLICATE_CLASS_ERROR);
+    }
+
+    if (this.order > 2) {
+      throw new Error(CLASS_ORDER_ERROR);
+    }
+
+    return {
+      ...this,
+      selector: `${this.selector}#${value}`,
+      hasId: true,
+      order: 2,
+    };
   },
 
-  class(/* value */) {
-    throw new Error('Not implemented');
+  class(value) {
+    if (this.order > 3) {
+      throw new Error(CLASS_ORDER_ERROR);
+    }
+
+    return {
+      ...this,
+      selector: `${this.selector}.${value}`,
+      order: 3,
+    };
   },
 
-  attr(/* value */) {
-    throw new Error('Not implemented');
+  attr(value) {
+    if (this.order > 4) {
+      throw new Error(CLASS_ORDER_ERROR);
+    }
+
+    return {
+      ...this,
+      selector: `${this.selector}[${value}]`,
+      order: 4,
+    };
   },
 
-  pseudoClass(/* value */) {
-    throw new Error('Not implemented');
+  pseudoClass(value) {
+    if (this.order > 5) {
+      throw new Error(CLASS_ORDER_ERROR);
+    }
+
+    return {
+      ...this,
+      selector: `${this.selector}:${value}`,
+      order: 5,
+    };
   },
 
-  pseudoElement(/* value */) {
-    throw new Error('Not implemented');
+  pseudoElement(value) {
+    if (this.hasPseudoElement) {
+      throw new Error(DUPLICATE_CLASS_ERROR);
+    }
+
+    return {
+      ...this,
+      selector: `${this.selector}::${value}`,
+      hasPseudoElement: true,
+      order: 6,
+    };
   },
 
-  combine(/* selector1, combinator, selector2 */) {
-    throw new Error('Not implemented');
+  combine(selector1, combinator, selector2) {
+    const firstSelector = selector1.stringify();
+    const secondSelector = selector2.stringify();
+
+    return {
+      ...this,
+      selector: `${this.selector}${firstSelector} ${combinator} ${secondSelector}`,
+      hasElement: selector2.hasElement,
+      hasId: selector2.hasId,
+      hasPseudoElement: selector2.hasPseudoElement,
+      order: selector2.order,
+    };
+  },
+  stringify() {
+    return this.selector;
   },
 };
 
